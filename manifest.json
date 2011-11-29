@@ -1,0 +1,21 @@
+{
+  "name": "Double Cross",
+  "version": "0.1.0",
+  "description": "Spy on the websites that spy on your web activity",
+  "browser_action": {
+    "default_icon": "images/icon.png"
+  },
+  "permissions": [
+    "<all_urls>",
+    "background",
+    "cookies",
+    "unlimitedStorage"
+  ],
+  "background_page": "logger.html",
+  "content_scripts": [{
+    "matches": ["http://*/*", "https://*/*"],
+    "js": ["util.js", "inject.js"],
+    "run_at": "document_start",
+    "all_frames": true
+  }]
+}
