@@ -22,4 +22,30 @@ function hook(e) {
   chrome.extension.sendRequest({'msg': 'log', 'req': req, 'ref': ref});
 }
 
+function framesearch(e) {
+  if (e.target.tagName == "IFRAME" && e.target.src) {
+    hook({'url': e.target.src});
+  } else if (e.target.getElementsByTagName) { // Might be a Text node
+    var iframes = e.target.getElementsByTagName('iframe');
+    for (var i = 0; i < iframes.length; i++) {
+      if (iframes[i].src) {
+        hook({'url': iframes[i].src});
+      }
+    }
+  }
+}
+
+function metainject() {
+  var metainject = document.createElement('script');
+  metainject.src = chrome.extension.getURL('metainject.js');
+  document.head.appendChild(metainject);
+}
+
+// Wait a wee bit until document.head exists
+// There's a teensy tiny race condition for iframes that are created before
+// this callback gets executed (and the metainject gets injected). Let's not
+// worry about that, since in practice this callback is called pretty damn fast
+setTimeout(metainject, 0);
+
 document.addEventListener('beforeload', hook, true);
+document.addEventListener('DOMNodeInsertedIntoDocument', framesearch, true);
