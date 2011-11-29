@@ -1,10 +1,16 @@
 function hook(e) {
-  // We're only interested in http (and https)
-  if (window.location.protocol.indexOf("http") == -1) {
+  if (e.url == "about:blank") {
+    // Special case this. There are probably more like this.
+    // TODO: put something more robust here
     return;
   }
 
   var req = parse_url(e.url), ref = parse_url(document.location.href);
+
+  // We're only interested in http (and https)
+  if (req.protocol.indexOf("http") == -1) {
+    return;
+  }
 
   // We're only really interested in cross-domain requests. This is some sort of
   // poor approximation of same-origin. ish.
