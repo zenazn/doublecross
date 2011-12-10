@@ -11,10 +11,10 @@
     "cookies",
     "unlimitedStorage"
   ],
-  "background_page": "logger.html",
+  "background_page": "background.html",
   "content_scripts": [{
     "matches": ["http://*/*", "https://*/*"],
-    "js": ["util.js", "inject.js"],
+    "js": ["logging/util.js", "logging/inject.js"],
     "run_at": "document_start",
     "all_frames": true
   }]

@@ -37,7 +37,7 @@ function framesearch(e) {
 
 function metainject() {
   var metainject = document.createElement('script');
-  metainject.src = chrome.extension.getURL('metainject.js');
+  metainject.src = chrome.extension.getURL('logging/metainject.js');
   document.head.appendChild(metainject);
 }
 
