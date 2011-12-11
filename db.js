@@ -25,6 +25,14 @@ db.changeVersion('', '1', function(tx) {
   });
 });
 
+function _db_rowize(callback, tx, rs) {
+  var rows = [];
+  for (var i = 0; i < rs.rows.length; i++) {
+    rows.push(rs.rows.item(i));
+  }
+  callback(rows);
+}
+
 function db_insert_request(req, ref) {
   db.transaction(function(tx) {
     tx.executeSql(
@@ -38,5 +46,22 @@ function db_insert_request(req, ref) {
 function db_reset() {
   db.transaction(function(tx) {
     tx.executeSql("DELETE FROM requests");
+  });
+}
+
+function db_get_trackers(callback) {
+  db.transaction(function(tx) {
+    tx.executeSql(
+      "SELECT req_root, COUNT(*) as num FROM requests GROUP BY req_root ORDER BY num DESC LIMIT 50", [],
+      _db_rowize.bind(null, callback));
+  });
+}
+
+function db_get_by_tracker(tracker, callback) {
+  db.transaction(function(tx) {
+    // TODO: ref_domain instead of ref_root
+    tx.executeSql(
+      "SELECT ref_root, COUNT(*) as num FROM requests WHERE req_root = ? GROUP BY ref_root ORDER BY num DESC LIMIT 30", [tracker],
+      _db_rowize.bind(null, callback));
   });
 }
