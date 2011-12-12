@@ -1,22 +1,29 @@
-var fill = d3.scale.category20();
-var v;
-
-// Easy attribute getter
+// Easy attribute getter, with optional function wrapper
 var $a = function(attr, f) {
-  if (typeof f == 'function') {
-    return function(d) { return f(d[attr]); };
-  } else {
-    return function(d) { return d[attr]; };
+  return function(d) {
+    return (typeof f == 'function') ? f(d[attr]) : d[attr];
   }
 }
 
-window.addEventListener('load', function() {
+// We really ought to use some sort of load event here, but there's some weird
+// bug (?) in Chrome that makes the div be 0x0 when this code gets called the
+// first time (refreshes work just fine). Since everything is served off of
+// disk anyways, this kludge will probably work just fine
+setTimeout(function() {
   var div = document.getElementById('content');
-  var minsize = Math.min(div.offsetHeight, div.offsetWidth);
+  // TODO: This isn't robust to page refreshes
+  var w = div.offsetWidth, h = div.offsetHeight;
+  var minsize = Math.min(w, h);
+
+  // Top-level SVG
+  var v = d3.select('#content').append('svg');
+
+  var fill = d3.scale.category20();
   var bubble = d3.layout.pack()
     .sort(null)
-    .size([div.offsetWidth, div.offsetHeight])
+    .size([w, h])
     .value(function(d) { return d.num; });
+
   var burst_scale = 0.9 * minsize / 2.0 / 3.0;
   var sunburst = d3.layout.partition()
     .sort(null)
@@ -29,13 +36,9 @@ window.addEventListener('load', function() {
     // equal width
     .innerRadius(function(d) { return (d.y - d.dy) * burst_scale / (burst_scale - d.dy) + minsize / 4.0; })
     .outerRadius(function(d) { return d.y * burst_scale / (burst_scale - d.dy) + minsize / 4.0; });
-  v = d3.select('#content').append('svg')
-    .attr('width', div.offsetWidth)
-    .attr('height', div.offsetHeight)
-    .attr('class', 'bubble');
 
 
-  // Render a bubble-thing of all the trackers
+  // Render a bubble layout of all the trackers
   var render_trackers = function(trackers) {
     var node = v.selectAll('g.node')
       .data(bubble.nodes({'children': trackers})
@@ -43,17 +46,21 @@ window.addEventListener('load', function() {
       .enter().append('g')
         .attr('class', 'node')
         .on('click', function(targ) {
-          var s = minsize / (4.0 * targ.r);
           // Center and zoom on the clicked node
+          // s is the scaling factor to get the focused node uniformly sized
+          var s = minsize / (4.0 * targ.r);
           v.selectAll('path.pie').remove();
           v.selectAll('g.node').transition()
             .duration(500)
             .attr('transform', function(d) {
-              var x = (d.x - targ.x) * s + div.offsetWidth / 2,
-                  y = (d.y - targ.y) * s + div.offsetHeight / 2;
+              var x = (d.x - targ.x) * s + w / 2.0,
+                  y = (d.y - targ.y) * s + h / 2.0;
               return 'translate(' + x + ', ' + y + ') scale(' + s + ', ' + s + ')';
             });
+
+          // Fetch data for the pie chart
           setTimeout(db_get_by_tracker.bind(null, targ.req_root, render_tracker.bind(null, targ.req_root)), 600);
+
           // Nom the event so our other mouse handlers don't fire
           d3.event.stopPropagation();
         })
@@ -63,9 +70,11 @@ window.addEventListener('load', function() {
 
     node.append('title')
       .text(function(d) { return d.req_root + ': ' + d.num; });
+
     node.append('circle')
       .attr('r', $a('r'))
       .attr('fill', $a('req_root', fill));
+
     node.append('text')
       .attr('text-anchor', 'middle')
       .attr('dy', '.3em')
@@ -79,17 +88,17 @@ window.addEventListener('load', function() {
   // Render a sunburst chart of per-tracker sites around a central node
   var render_tracker = function(tracker, rows) {
     var fill = d3.scale.category20();
-    // First, build up the tree
+
     var tree = {children: rows};
+
     var path = v.selectAll('path.pie')
       .data(sunburst.nodes(tree))
       .enter().append('path')
       .attr('class', 'pie')
       .attr('d', arc)
-      .attr('transform', function(d) {
-        return 'translate(' + (div.offsetWidth / 2.0) + ', ' + (div.offsetHeight / 2.0) + ')';
-      })
+      .attr('transform', 'translate(' + (w / 2.0) + ', ' + (h / 2.0) + ')')
       .style('visibility', function(d) {
+        // Get rid of the central node
         return d.depth == 0 ? 'hidden' : null;
       })
       .style('stroke', '#fff')
@@ -99,13 +108,13 @@ window.addEventListener('load', function() {
         console.log(tracker + ", " + d.ref_root);
         d3.event.stopPropagation();
       });
+
     path.append('title')
       .text(function(d) { return d.ref_root + ': ' + d.num; });
-
   };
 
   var render_site = function(site, tracker, rows) {
-
+    // TODO: this
   };
 
   document.getElementById('content').addEventListener('click', function(e) {
@@ -116,6 +125,6 @@ window.addEventListener('load', function() {
       });
   });
 
+  // Start things off
   db_get_trackers(render_trackers);
-});
-
+}, 10);
